@@ -1,0 +1,13 @@
+
+
+Fiat-collateralized stablecoins: These are backed by holdings of fiat currencies e.g. USD, typically 
+at a one-to-one ratio of collateral assets to stablecoins issued. Examples include USDT, USDC and TUSD.
+
+Crypto-collateralized stablecoins: These back their value with a basket of cryptocurrencies 
+(e.g. Bitcoin, Ethereum) etc., typically at a higher ratio of 1.5:1 to 2:1 
+of collateral asset value to stablecoins issued. Examples include Dai, BitUSD, and sUSD.
+
+Algorithmic stablecoins: These use complex incentive mechanisms
+to manage supply and demand in order to maintain price stability.
+Examples include Basis Cash and Frax.
+
