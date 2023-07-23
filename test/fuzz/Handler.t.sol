@@ -43,7 +43,7 @@ contract Handler is Test{
     vm.startPrank(msg.sender);
     _ranColleteral.mint(msg.sender,_amountColleteral);
     _ranColleteral.approve(address(dscEngine),_amountColleteral);
-    dscEngine.depositColleteral(address(_ranColleteral),_amountColleteral);   
+    dscEngine.depositCollateral(address(_ranColleteral),_amountColleteral);   
     vm.stopPrank();
     usersWithColleteralDeposited.push(msg.sender);
    }
@@ -55,7 +55,7 @@ contract Handler is Test{
      if(_amountColleteral==0){
         return;
      }
-     dscEngine.redeemColleteral(address(_ranColleteral),_amountColleteral);
+     dscEngine.redeemCollateral(address(_ranColleteral),_amountColleteral);
 
    }
 

@@ -62,7 +62,7 @@ function mint(address _to,uint256 _amount)external onlyOwner returns(bool) {
         revert DecentralizedStableCoin__CantMintZeroAddress();
     }
     if(_amount<=0){
-        revert DecentralizedStableCoin__CantMintZeroAddress();
+        revert DecentralizedStableCoin__MustBeMoreThenZero();
     }
     _mint(_to,_amount);
     return(true);

@@ -54,7 +54,7 @@ contract DSCEngine is ReentrancyGuard{
     
      error DSCEngine__MustBeMoreThenZero();
      error DSCEngine__TokenAddressAndPriceFeedAddressLengthInEqual();
-     error DecentralizedStableCoin__NotAllowedToken();
+     error DecentralizedStableCoin__NotAllowedToken(address tokenAddress);
      error DSCEngine__TransferFailed();
      error DSCEngine__BreaksHealthFactor(uint256 healthfactor);
      error DSCEngine__MintFailed();
@@ -84,8 +84,9 @@ contract DSCEngine is ReentrancyGuard{
     //! ////////// Events ////////////// 
     //! ///////////////////////////////
 
-    event ColleteralDeposited(address indexed user,address indexed token,uint256 amount);
-    event ColleteralRedeemed(address indexed redeemedFrom,address indexed redeemedTo,address indexed token,uint256  amount);
+    event CollateralDeposited(address indexed user,address indexed token,uint256 amount);
+    //1 difference in indexed identifier can fail the emit test...
+    event CollateralRedeemed(address indexed redeemedFrom,address indexed redeemedTo,address indexed token,uint256  amount);
     //! ///////////////////////////////// 
     //! ////////// Modifiers /////////// 
     //! ///////////////////////////////
@@ -99,7 +100,7 @@ contract DSCEngine is ReentrancyGuard{
 
     modifier isAllowedToken(address _tokenAddress){
        if(s_priceFeeds[_tokenAddress]==address(0)){
-        revert DecentralizedStableCoin__NotAllowedToken();
+        revert DecentralizedStableCoin__NotAllowedToken(_tokenAddress);
        }
        _;
     }
@@ -130,10 +131,10 @@ contract DSCEngine is ReentrancyGuard{
      * @param amountDscToMint: The amount of DSC you want to mint
      * @notice This function will deposit your collateral and mint DSC in one transaction
      */
-    function depositColleteralAndMintDsc(address _tokenColleteral,
+    function depositCollateralAndMintDsc(address _tokenColleteral,
             uint256 _amountColleteral,
             uint256 _amountDscMint) public{
-            depositColleteral(_tokenColleteral,_amountColleteral);
+            depositCollateral(_tokenColleteral,_amountColleteral);
             mintDSC(_amountDscMint);
             }
   
@@ -143,12 +144,12 @@ contract DSCEngine is ReentrancyGuard{
      * @notice This function will redeem your collateral.
      * @notice If you have DSC minted, you will not be able to redeem until you burn your DSC
      */
-    function redeemColleteral(
+    function redeemCollateral(
              address _tokenColleteralAddress,
              uint256 _amountColleteral) public 
              moreThanZero(_amountColleteral)
              nonReentrant{
-        _redeemColleteral(_tokenColleteralAddress,_amountColleteral,msg.sender,msg.sender);
+        _redeemCollateral(_tokenColleteralAddress,_amountColleteral,msg.sender,msg.sender);
         _revertIfHealthFactorIsBroken(msg.sender);
     }
       /*
@@ -157,13 +158,13 @@ contract DSCEngine is ReentrancyGuard{
      * @param amountDscToBurn: The amount of DSC you want to burn
      * @notice This function will withdraw your collateral and burn DSC in one transaction
      */
-     function redeemColleteralforDsc(address _tokenColleteralAddress,
+     function redeemCollateralforDsc(address _tokenColleteralAddress,
         uint256 _amountColleteral,
         uint256 _amountDcsToburn)public{
          burnDsc(_amountDcsToburn);
-         redeemColleteral(_tokenColleteralAddress,_amountColleteral);
+         redeemCollateral(_tokenColleteralAddress,_amountColleteral);
      }
-    function depositColleteral(
+    function depositCollateral(
         address _tokenColleteralAddress,
         uint256 _amountColleteral)public 
         moreThanZero(_amountColleteral) 
@@ -171,7 +172,7 @@ contract DSCEngine is ReentrancyGuard{
         nonReentrant
         {
             s_colleteralDeposited[msg.sender][_tokenColleteralAddress]+=_amountColleteral;
-            emit ColleteralDeposited(msg.sender,_tokenColleteralAddress,_amountColleteral);
+            emit CollateralDeposited(msg.sender,_tokenColleteralAddress,_amountColleteral);
 
             bool success=IERC20(_tokenColleteralAddress).transferFrom(msg.sender,address(this),_amountColleteral);
             //redundant check----->           
@@ -237,7 +238,7 @@ contract DSCEngine is ReentrancyGuard{
 
         uint256 totalColleteralToRedeem=tokenAmountFromDebtCovered+bonusColleteral;
 
-        _redeemColleteral(_colleteralAddress,totalColleteralToRedeem,_user,msg.sender);
+        _redeemCollateral(_colleteralAddress,totalColleteralToRedeem,_user,msg.sender);
         _burnDsc(_debtToCover,_user,msg.sender);
         uint256 endingHealthFactor=_healthFactor(_user);
         if(endingHealthFactor<=startingUserHealthFactor){
@@ -261,11 +262,11 @@ contract DSCEngine is ReentrancyGuard{
         i_decentralizedStableCoin.burn(_amountDscToBurn);
     }
 
-    function _redeemColleteral(address _tokenColleteralAddress,uint256 _amountColleteral,address _from,address _to)private{
+    function _redeemCollateral(address _tokenColleteralAddress,uint256 _amountColleteral,address _from,address _to)private{
         //if underflow it will revert ...   
         s_colleteralDeposited[_from][_tokenColleteralAddress]-=_amountColleteral;
         //we gonna emit event cause modifiying the state (good practice)...
-        emit ColleteralRedeemed(_from,_to,_tokenColleteralAddress,_amountColleteral);
+        emit CollateralRedeemed(_from,_to,_tokenColleteralAddress,_amountColleteral);
         
         bool success=IERC20(_tokenColleteralAddress).transfer(_to,_amountColleteral);
         if(!success){
@@ -279,7 +280,7 @@ contract DSCEngine is ReentrancyGuard{
                                                   view
                                                   returns(uint256 totalDSCMinted,uint256 colleteralValueInUsd){
         totalDSCMinted=s_DSCMinted[user];
-        colleteralValueInUsd=getAccountColleteralValue(user);
+        colleteralValueInUsd=getAccountCollateralValue(user);
     }
 
 
@@ -322,7 +323,7 @@ contract DSCEngine is ReentrancyGuard{
     //! ////////// Public & external view & pure Functions//
     //! ///////////////////////////////////////////////////
 
-    function getAccountColleteralValue(address user) public view returns(uint256 totalColleteralValueInUsd){
+    function getAccountCollateralValue(address user) public view returns(uint256 totalColleteralValueInUsd){
         for(uint256 i=0;i<s_colleteralTokens.length;i++){
            address token=s_colleteralTokens[i];
            uint256 amount=s_colleteralDeposited[user][token];
@@ -367,11 +368,12 @@ contract DSCEngine is ReentrancyGuard{
         return _calculateHealthFactor(totalDscMinted, collateralValueInUsd);
     }
 
-        function getCollateralBalanceOfUser(address user, address token) external view returns (uint256) {
+
+    function getCollateralBalanceOfUser(address user, address token) external view returns (uint256) {
         return s_colleteralDeposited[user][token];
     }
 
- function getPrecision() external pure returns (uint256) {
+    function getPrecision() external pure returns (uint256) {
         return PRECISION;
     }
 

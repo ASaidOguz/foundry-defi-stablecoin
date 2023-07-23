@@ -16,10 +16,12 @@ library OracleLib {
       uint256 updatedAt,
       uint80 answeredInRound)=_priceFeed.latestRoundData();
        uint256 timepassedSinceupdate=block.timestamp-updatedAt;
-       if(timepassedSinceupdate>TIME_OUT) revert OracleLib__OraclePriceFeedStale();
+       if(updatedAt == 0 ||timepassedSinceupdate>TIME_OUT) revert OracleLib__OraclePriceFeedStale();
        return(roundId,answer,startedAt,updatedAt,answeredInRound);
     }
     
-   
+       function getTimeout(AggregatorV3Interface /* chainlinkFeed */ ) public pure returns (uint256) {
+        return TIME_OUT;
+    }
 
 }
